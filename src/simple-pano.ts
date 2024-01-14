@@ -77,13 +77,16 @@ export class SimplePano implements SimplePanoType {
 
     buttonElement.onclick = () => {
       this.changeImagePhotoDome(toImage);
-      // this.buttonNavigates.forEach((buttonNavigate) => {
-      //   if (buttonNavigate.buttonElement.dataset.inImage === inImage) {
-      //     buttonNavigate.buttonElement.style.display = 'block';
-      //     return;
-      //   }
-      //   buttonNavigate.buttonElement.style.display = 'none';
-      // });
+      this.buttonNavigates.forEach((buttonNavigate) => {
+        if (buttonNavigate.buttonElement.dataset.inImage === toImage) {
+          buttonNavigate.buttonElement.style.display = 'block';
+          buttonNavigate.buttonElement.dataset.isHide = 'false';
+          return;
+        }
+
+        buttonNavigate.buttonElement.style.display = 'none';
+        buttonNavigate.buttonElement.dataset.isHide = 'true';
+      });
     };
 
     this.buttonNavigates.push({
@@ -106,7 +109,7 @@ export class SimplePano implements SimplePanoType {
           this.camera.getProjectionMatrix(),
           this.camera.viewport.toGlobal(this.engine.getRenderWidth(), this.engine.getRenderHeight())
         );
-        if (projectedPosition.z > 1) {
+        if (projectedPosition.z > 1 || buttonNavigate.buttonElement.dataset.isHide === 'true') {
           buttonNavigate.buttonElement.style.display = 'none';
           return;
         }
