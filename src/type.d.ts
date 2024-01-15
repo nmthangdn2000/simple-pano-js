@@ -18,4 +18,19 @@ export type SimplePanoType = {
    * Description: Launch a render loop
    */
   runRenderLoop(renderFunction: () => void): void;
+
+  /**
+   * Set the images panorama
+   * @param images
+   */
+  setImages(images: string[]): void;
+
+  /**
+   * Create button navigation
+   * @param id
+   * @param inImage
+   * @param toImage
+   * @param position
+   */
+  createButtonNavigation(id: string, inImage: string, toImage: string, position: Vector3): void;
 };
