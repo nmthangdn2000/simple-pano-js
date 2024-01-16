@@ -1,4 +1,10 @@
-import { EngineOptions } from '@babylonjs/core';
+import { EngineOptions, Texture } from '@babylonjs/core';
+
+export type ImagePanoAssets = {
+  lowQualityImage: string;
+  tileImages: string[];
+  texture?: Texture;
+};
 
 export type SimplePanoType = {
   /**
