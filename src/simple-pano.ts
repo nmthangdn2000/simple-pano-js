@@ -231,34 +231,66 @@ export class SimplePano implements SimplePanoType {
 
     const aspectRatio = screenWidth / screenHeight;
 
-    const pickTopLeft = this.scene.pick(-1, -1);
+    const pickTopLeft = this.scene.pick(0, 0);
+    const pickTopRight = this.scene.pick(screenWidth, 0);
+    const pickBottomLeft = this.scene.pick(0, screenHeight);
     const pickBottomRight = this.scene.pick(screenWidth, screenHeight);
 
     const coordinateTopLeft = pickTopLeft
       .getTextureCoordinates()
       ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
 
-    const coordinateTopRight = pickBottomRight
+    const coordinateTopRight = pickTopRight
       .getTextureCoordinates()
       ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
 
-    const sumTileColInScreen = Math.abs(Math.floor((coordinateTopRight!.x - coordinateTopLeft!.x) / cutWidth));
-    const sumTileRowInScreen = Math.abs(Math.floor((coordinateTopRight!.y - coordinateTopLeft!.y) / cutHeight));
+    const coordinateBottomLeft = pickBottomLeft
+      .getTextureCoordinates()
+      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
 
-    const tileX = Math.floor(coordinateTopLeft!.x / cutWidth);
-    const tileY = Math.floor(coordinateTopLeft!.y / cutHeight);
+    const coordinateBottomRight = pickBottomRight
+      .getTextureCoordinates()
+      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
 
-    console.log(sumTileColInScreen, sumTileRowInScreen, tileX, tileY);
+    const sumTileColInScreen = Math.abs(Math.ceil((coordinateBottomRight!.x - coordinateTopLeft!.x) / cutWidth));
+    const sumTileRowInScreen =
+      Math.abs(Math.ceil((coordinateBottomRight!.y - coordinateTopLeft!.y) / cutHeight)) +
+      2 +
+      Math.ceil(Math.abs(this.camera.beta - Math.PI / 2) / (Math.PI / 40));
 
-    Array.from({ length: sumTileColInScreen * sumTileRowInScreen }).forEach((_, index) => {
-      const _tileX = tileX + Math.floor(index / sumTileColInScreen);
-      const _tileY = tileY + (index % sumTileColInScreen);
+    const beginTileTopLeftX = Math.floor(coordinateTopLeft!.x / cutWidth);
+    const beginTileTopLeftY = (Math.floor(coordinateTopLeft!.y / cutHeight) - 1 + 40) % 40;
 
-      const x = _tileX < 1 || _tileX > 40 ? 1 : _tileX;
-      const y = _tileY < 1 || _tileY > 40 ? 1 : _tileY;
+    const beginTileTopRightX = Math.floor(coordinateTopRight!.x / cutWidth);
+    const beginTileTopRightY = (Math.floor(coordinateTopRight!.y / cutHeight) - 1 + 40) % 40;
+
+    console.log(sumTileColInScreen, sumTileRowInScreen, beginTileTopLeftX, beginTileTopLeftY);
+
+    const tiles: Record<string, { x: number; y: number }> = {};
+
+    Array.from({ length: sumTileColInScreen }).forEach((_, x) => {
+      Array.from({ length: sumTileRowInScreen }).forEach((_, y) => {
+        const tileX = (beginTileTopLeftX + x) % 40;
+        const tileY = (beginTileTopLeftY + y) % 40;
+
+        tiles[`${tileX}_${tileY}`] = { x: tileX, y: tileY };
+      });
+    });
+
+    Array.from({ length: sumTileColInScreen }).forEach((_, x) => {
+      Array.from({ length: sumTileRowInScreen }).forEach((_, y) => {
+        const tileX = (beginTileTopRightX - x + 40) % 40;
+        const tileY = (beginTileTopRightY - y + 40) % 40;
+
+        tiles[`${tileX}_${tileY}`] = { x: tileX, y: tileY };
+      });
+    });
+
+    Object.keys(tiles).forEach((key) => {
+      const { x, y } = tiles[key];
 
       // imageAbc.src = `${imageLowQuality.split('.')[0]}/${_tileX}_${_tileY}.jpg`;
-      const url = `/src/assets/tile/cut_${y}_${x}.png`;
+      const url = `/src/assets/tile/cut_${y + 1}_${x + 1}.png`;
       if (this.imagePanoAssets[0].tileImages.includes(url)) return;
       const imageAbc = new Image();
       imageAbc.src = url;
@@ -268,7 +300,7 @@ export class SimplePano implements SimplePanoType {
         this.imagePanoAssets[0].tileImages.push(url);
 
         //Add image to dynamic texture
-        context.drawImage(imageAbc, (x - 1) * cutWidth, (y - 1) * cutHeight, cutWidth, cutHeight);
+        context.drawImage(imageAbc, x * cutWidth, y * cutHeight, cutWidth, cutHeight);
         dynamicTexture.update(false);
       };
     });
