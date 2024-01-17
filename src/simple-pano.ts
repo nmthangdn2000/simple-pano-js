@@ -229,62 +229,42 @@ export class SimplePano implements SimplePanoType {
     const screenWidth = this.engine.getRenderWidth();
     const screenHeight = this.engine.getRenderHeight();
 
-    const aspectRatio = screenWidth / screenHeight;
-
-    const pickTopLeft = this.scene.pick(0, 0);
-    const pickTopRight = this.scene.pick(screenWidth, 0);
-    const pickBottomLeft = this.scene.pick(0, screenHeight);
-    const pickBottomRight = this.scene.pick(screenWidth, screenHeight);
-
-    const coordinateTopLeft = pickTopLeft
-      .getTextureCoordinates()
-      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
-
-    const coordinateTopRight = pickTopRight
-      .getTextureCoordinates()
-      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
-
-    const coordinateBottomLeft = pickBottomLeft
-      .getTextureCoordinates()
-      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
-
-    const coordinateBottomRight = pickBottomRight
-      .getTextureCoordinates()
-      ?.multiply(new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height));
-
-    const sumTileColInScreen = Math.abs(Math.ceil((coordinateBottomRight!.x - coordinateTopLeft!.x) / cutWidth));
-    const sumTileRowInScreen =
-      Math.abs(Math.ceil((coordinateBottomRight!.y - coordinateTopLeft!.y) / cutHeight)) +
-      2 +
-      Math.ceil(Math.abs(this.camera.beta - Math.PI / 2) / (Math.PI / 40));
-
-    const beginTileTopLeftX = Math.floor(coordinateTopLeft!.x / cutWidth);
-    const beginTileTopLeftY = (Math.floor(coordinateTopLeft!.y / cutHeight) - 1 + 40) % 40;
-
-    const beginTileTopRightX = Math.floor(coordinateTopRight!.x / cutWidth);
-    const beginTileTopRightY = (Math.floor(coordinateTopRight!.y / cutHeight) - 1 + 40) % 40;
-
-    console.log(sumTileColInScreen, sumTileRowInScreen, beginTileTopLeftX, beginTileTopLeftY);
+    function getPoint(screenX: number, screenY: number, scene: Scene) {
+      const sizeTexturePhotoDomeVector = new Vector2(sizeTexturePhotoDome.width, sizeTexturePhotoDome.height);
+      return scene.pick(screenX, screenY).getTextureCoordinates()?.multiply(sizeTexturePhotoDomeVector);
+    }
 
     const tiles: Record<string, { x: number; y: number }> = {};
 
-    Array.from({ length: sumTileColInScreen }).forEach((_, x) => {
-      Array.from({ length: sumTileRowInScreen }).forEach((_, y) => {
-        const tileX = (beginTileTopLeftX + x) % 40;
-        const tileY = (beginTileTopLeftY + y) % 40;
+    function updateTiles(startPoint: Vector2, endPoint: Vector2) {
+      const sumTileX = Math.ceil(Math.abs(startPoint.x - endPoint.x) / cutWidth);
+      const sumTileY = Math.ceil(Math.abs(startPoint.y - endPoint.y) / cutHeight);
 
-        tiles[`${tileX}_${tileY}`] = { x: tileX, y: tileY };
-      });
-    });
+      const beginTileX = Math.floor(Math.min(startPoint.x, endPoint.x) / cutWidth);
+      const beginTileY = Math.floor(Math.min(startPoint.y, endPoint.y) / cutHeight);
 
-    Array.from({ length: sumTileColInScreen }).forEach((_, x) => {
-      Array.from({ length: sumTileRowInScreen }).forEach((_, y) => {
-        const tileX = (beginTileTopRightX - x + 40) % 40;
-        const tileY = (beginTileTopRightY - y + 40) % 40;
+      for (let x = 0; x < sumTileX; ++x) {
+        for (let y = 0; y < sumTileY; ++y) {
+          const tileX = (beginTileX + x + 40) % 40;
+          const tileY = (beginTileY + y + 40) % 40;
 
-        tiles[`${tileX}_${tileY}`] = { x: tileX, y: tileY };
-      });
-    });
+          tiles[`${tileX}_${tileY}`] = { x: tileX, y: tileY };
+        }
+      }
+    }
+
+    const center = getPoint(screenWidth / 2, screenHeight / 2, this.scene);
+
+    const steps = 30 + Math.round((Math.abs(this.camera.beta - Math.PI / 2) / (Math.PI / 2)) * 30);
+
+    for (let stepX = 0; stepX <= steps; ++stepX) {
+      for (let stepY = 0; stepY <= steps; ++stepY) {
+        const point = getPoint((screenWidth / steps) * stepX, (screenHeight / steps) * stepY, this.scene);
+        updateTiles(point!, center!);
+      }
+    }
+
+    console.log(tiles); // Qua choan nan
 
     Object.keys(tiles).forEach((key) => {
       const { x, y } = tiles[key];
